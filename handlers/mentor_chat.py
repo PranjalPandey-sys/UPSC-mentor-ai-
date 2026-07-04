@@ -46,7 +46,11 @@ async def handle_doubt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         level=profile.get("level", "intermediate"),
         phase=profile.get("phase", ""),
         subject="",
+        flags=ctx.get("flags", []),
     )
+    prefs = await db.get_preferences(user.id)
+    from prompts.mentor_persona import apply_persona
+    system = apply_persona(system, prefs.get("persona", "default"))
     user_msg = f"{context_block}\n\nStudent's question: {question}"
 
     start = time.monotonic()

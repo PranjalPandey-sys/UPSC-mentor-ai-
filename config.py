@@ -62,6 +62,11 @@ TOKENS_STUDY_ANALYSIS: int = 700
 TOKENS_WEEKLY: int = 450
 TOKENS_INSIGHTS: int = 550
 TOKENS_MEMORY_EXTRACT: int = 300
+TOKENS_MOCK_MCQ: int = 500
+TOKENS_ETHICS_FRAMEWORK: int = 400
+TOKENS_OPTIONAL_GUIDANCE: int = 550
+TOKENS_MONTHLY: int = 550
+TOKENS_ESSAY_TOPIC: int = 250
 
 # ── Flask keep-alive ───────────────────────────────────────────────────────────
 PORT: int = int(os.environ.get("PORT", 8081))   # different from main bot's port
@@ -70,6 +75,12 @@ PORT: int = int(os.environ.get("PORT", 8081))   # different from main bot's port
 LOG_LEVEL: int = logging.INFO
 
 # ── Memory system ──────────────────────────────────────────────────────────────
-MAX_ACTIVE_MEMORIES: int = 25          # per user, injected into every context
+MAX_ACTIVE_MEMORIES: int = 30          # per user, injected into every context
 MEMORY_EXTRACTION_EVERY_N_MSGS: int = 6  # run extractor every N user turns
-RECENT_CHAT_WINDOW: int = 8            # last N messages loaded into context
+# Per mentor.txt: "Load last 15 messages" for short-term conversational
+# memory (pronoun/follow-up resolution: "explain it further", "what about India?")
+RECENT_CHAT_WINDOW: int = 15
+
+# ── Proactive mentoring thresholds (mentor.txt Phase 2 §5, §6) ────────────────
+INACTIVITY_FLAG_DAYS: int = 3          # flag if no activity for N days
+STREAK_DROP_FLAG: int = 1              # flag if streak resets to 0 after being >=this

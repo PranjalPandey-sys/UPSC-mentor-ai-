@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     user_id         BIGINT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     language        TEXT DEFAULT 'en',
     response_length TEXT DEFAULT 'standard',           -- brief|standard|detailed
+    persona         TEXT DEFAULT 'default',             -- strict|friendly|strategy|answer_writing|default
     notify_weekly   BOOLEAN DEFAULT TRUE,
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
