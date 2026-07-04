@@ -131,6 +131,7 @@ def init_db() -> None:
                 user_id INTEGER PRIMARY KEY,
                 language TEXT DEFAULT 'en',
                 response_length TEXT DEFAULT 'standard',
+                persona TEXT DEFAULT 'default',
                 notify_weekly INTEGER DEFAULT 1,
                 updated_at TEXT
             );
@@ -349,6 +350,84 @@ async def get_truncation_rate(hours: int = 24) -> dict:
         (f"-{hours} hours",),
     ).fetchall()
     return {r["finish_reason"]: r["n"] for r in rows}
+
+
+# ── Performance history (answer/essay/ethics/mock) ─────────────────────────
+
+async def get_performance_history(user_id: int, metric: str, limit: int = 5) -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT value, subject, recorded_at FROM performance_trends "
+        "WHERE user_id=? AND metric=? ORDER BY id DESC LIMIT ?",
+        (user_id, metric, limit),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_performance_avg(user_id: int, metric: str) -> float:
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT AVG(value) as avg_v, COUNT(*) as n FROM performance_trends WHERE user_id=? AND metric=?",
+        (user_id, metric),
+    ).fetchone()
+    return round(row["avg_v"], 1) if row and row["avg_v"] is not None else 0.0
+
+
+# ── Proactive mentoring heuristic (mentor.txt Phase 2 §5, §6) ──────────────
+
+async def get_progress_flags(user_id: int) -> list[str]:
+    """
+    Lightweight, explainable heuristic — not an ML model. Looks at
+    study_progress + users.last_active to decide whether the mentor should
+    proactively acknowledge inactivity or a broken streak. Kept simple and
+    inspectable on purpose: a false "you seem stressed" from a black-box
+    signal does more harm than good with a real aspirant.
+    """
+    conn = _get_conn()
+    flags: list[str] = []
+
+    user_row = conn.execute("SELECT last_active FROM users WHERE user_id=?", (user_id,)).fetchone()
+    if user_row and user_row["last_active"]:
+        try:
+            last_active = datetime.fromisoformat(user_row["last_active"])
+            days_inactive = (datetime.now(timezone.utc) - last_active).days
+            if days_inactive >= 7:
+                flags.append("inactive_7d")
+            elif days_inactive >= config.INACTIVITY_FLAG_DAYS:
+                flags.append("inactive_3d")
+        except Exception:
+            pass
+
+    prog = conn.execute("SELECT streak, best_streak FROM study_progress WHERE user_id=?", (user_id,)).fetchone()
+    if prog and prog["streak"] == 0 and prog["best_streak"] >= config.STREAK_DROP_FLAG:
+        flags.append("streak_reset")
+
+    return flags
+
+
+# ── User preferences (mentor persona, response length) ─────────────────────
+
+async def set_preference(user_id: int, **fields) -> None:
+    conn = _get_conn()
+    with _lock:
+        conn.execute(
+            "INSERT INTO user_preferences (user_id, updated_at) VALUES (?, ?) "
+            "ON CONFLICT(user_id) DO NOTHING",
+            (user_id, _now()),
+        )
+        if fields:
+            cols = ", ".join(f"{k}=?" for k in fields)
+            conn.execute(
+                f"UPDATE user_preferences SET {cols}, updated_at=? WHERE user_id=?",
+                (*fields.values(), _now(), user_id),
+            )
+        conn.commit()
+
+
+async def get_preferences(user_id: int) -> dict:
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,)).fetchone()
+    return dict(row) if row else {"language": "en", "response_length": "standard", "notify_weekly": 1}
 
 
 # ── Admin / analytics ───────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ async def build_context(user_id: int) -> dict:
     recent = await db.get_recent_messages(user_id, limit=config.RECENT_CHAT_WINDOW)
     progress = await db.get_study_progress(user_id)
     summary = await db.get_latest_summary(user_id)
+    flags = await db.get_progress_flags(user_id)
 
     return {
         "profile": profile,
@@ -30,6 +31,7 @@ async def build_context(user_id: int) -> dict:
         "recent_messages": recent,
         "progress": progress,
         "summary": summary,
+        "flags": flags,
     }
 
 
@@ -59,5 +61,8 @@ def render_context_block(ctx: dict) -> str:
 
     if ctx["summary"]:
         lines.append(f"Last summary: {ctx['summary']}")
+
+    if ctx["recent_messages"]:
+        lines.append("Recent conversation (most recent last):\n" + "\n".join(ctx["recent_messages"]))
 
     return "\n\n".join(lines) if lines else "No prior context available for this student."

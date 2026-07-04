@@ -17,7 +17,7 @@ from storage import database as db
 
 logger = logging.getLogger(__name__)
 
-_VALID_TAGS = {"GOAL", "WEAKNESS", "STRENGTH", "PATTERN", "PREFERENCE"}
+_VALID_TAGS = {"GOAL", "WEAKNESS", "STRENGTH", "PATTERN", "PREFERENCE", "MISTAKE", "RESOURCE"}
 
 
 async def maybe_extract(user_id: int, recent_messages: list[str]) -> None:
